@@ -1,38 +1,20 @@
 package types
 
 import (
-	"encoding/json"
-	"fmt"
-	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type Workout struct {
-	ID        string     `json:"id"`
-	UserID    string     `json:"user_id"`
+	gorm.Model
+	UserID    uint       `json:"user_id"`
 	Name      string     `json:"name"`
-	Exercises []Exercise `json:"exercises"`
+	Exercises []Exercise `json:"exercises" gorm:"many2many:workout_exercises;"`
 	Sets      []Set      `json:"sets,omitempty"`
-	Comments  []string   `json:"comments,omitempty"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DueDate   time.Time  `json:"due_date,omitempty"`
+	Comments  string     `json:"comments,omitempty"`
+	DueDate   time.Time  `json:"due_date"`
 	Status    Status     `json:"status,omitempty"`
-}
-
-func (w *Workout) String() string {
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Workout ID: %s\n", w.ID))
-	sb.WriteString(fmt.Sprintf("Name: %s\n", w.Name))
-	for _, exercise := range w.Exercises {
-		sb.WriteString(exercise.String())
-	}
-	return sb.String()
-}
-
-func (w *Workout) JSON() string {
-	data, _ := json.Marshal(w)
-	return string(data)
 }
 
 type Status string

@@ -4,18 +4,19 @@ import (
 	"fmt"
 
 	"github.com/HanmaDevin/workoutdev/database"
+	"github.com/HanmaDevin/workoutdev/types"
 	"github.com/charmbracelet/log"
 )
 
 func main() {
 	log.Info("Starting Database...")
-	db := database.InitDB("workout.db")
-	defer db.Close()
+	database.InitDatabase()
+	log.Info("Database initialized.")
 
-	database.PopulateDB(db)
+	var exercises []types.Exercise
+	database.DB.Find(&exercises)
 
-	exercises := database.GetExercises(db)
 	for _, exercise := range exercises {
-		fmt.Println(exercise.JSON())
+		fmt.Println(exercise.Name)
 	}
 }

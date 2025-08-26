@@ -12,8 +12,5 @@ func NewServer() *echo.Echo {
 }
 
 func StartServer(e *echo.Echo, db *sql.DB) {
-	e.GET("/workouts", func(c echo.Context) error {
-		return GetAllWorkouts(c, db)
-	})
 	e.Logger.Fatal(e.Start(":8080"))
 }
