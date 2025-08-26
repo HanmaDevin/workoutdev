@@ -83,6 +83,33 @@ func TestAddComment(t *testing.T) {
 	}
 }
 
+func TestGetCompletedWorkouts(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	workout := types.Workout{
+		UserID: "user1",
+		Name:   "Test Workout",
+		Status: types.StatusCompleted,
+	}
+	workout2 := types.Workout{
+		UserID: "user1",
+		Name:   "Test Workout 2",
+		Status: types.StatusCompleted,
+	}
+	database.CreateWorkout(db, &workout)
+	database.CreateWorkout(db, &workout2)
+
+	completedWorkouts, err := database.GetCompletedWorkouts(db, "user1")
+	if err != nil {
+		t.Fatalf("GetCompletedWorkouts failed: %v", err)
+	}
+
+	if len(completedWorkouts) != 2 {
+		t.Errorf("Expected 2 completed workouts, but got %d", len(completedWorkouts))
+	}
+}
+
 func TestMarkWorkoutCompleted(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

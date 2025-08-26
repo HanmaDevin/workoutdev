@@ -3,10 +3,10 @@ package database
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/HanmaDevin/workoutdev/types"
+	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
 )
 
@@ -86,13 +86,13 @@ func GetCompletedWorkouts(db *sql.DB, userID string) ([]types.Workout, error) {
 		var commentsJSON sql.NullString
 		err := rows.Scan(&workout.ID, &workout.Name, &commentsJSON, &workout.CreatedAt, &workout.UpdatedAt, &workout.DueDate, &workout.Status)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			continue
 		}
 		if commentsJSON.Valid {
 			err = json.Unmarshal([]byte(commentsJSON.String), &workout.Comments)
 			if err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 		}
 		workouts = append(workouts, workout)
@@ -121,13 +121,13 @@ func GetAllWorkouts(db *sql.DB, userID string, sortBy string) ([]types.Workout, 
 		var commentsJSON sql.NullString
 		err := rows.Scan(&workout.ID, &workout.Name, &commentsJSON, &workout.CreatedAt, &workout.UpdatedAt, &workout.DueDate, &workout.Status)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 			continue
 		}
 		if commentsJSON.Valid {
 			err = json.Unmarshal([]byte(commentsJSON.String), &workout.Comments)
 			if err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 		}
 		workouts = append(workouts, workout)

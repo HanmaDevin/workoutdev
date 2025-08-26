@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/HanmaDevin/workoutdev/database"
+	"github.com/charmbracelet/log"
 )
 
 func main() {
+	log.Info("Starting Database...")
 	db := database.InitDB("workout.db")
 	defer db.Close()
 
