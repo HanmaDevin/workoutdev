@@ -2,6 +2,14 @@ package database
 
 import "github.com/HanmaDevin/workoutdev/types"
 
+var ExerciseNames = map[string]bool{
+	"Barbell Bench Press": true,
+	"Squat":               true,
+	"Deadlift":            true,
+	"Overhead Press":      true,
+	"Pull-up":             true,
+}
+
 var Exercises = []types.Exercise{
 	{
 		Name:        "Barbell Bench Press",

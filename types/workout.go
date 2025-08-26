@@ -12,7 +12,7 @@ type Workout struct {
 	Name      string     `json:"name"`
 	Exercises []Exercise `json:"exercises" gorm:"many2many:workout_exercises;"`
 	Sets      []Set      `json:"sets,omitempty"`
-	Comments  string     `json:"comments,omitempty"`
+	Comments  []string   `json:"comments,omitempty"`
 	DueDate   time.Time  `json:"due_date"`
 	Status    Status     `json:"status,omitempty"`
 }
