@@ -2,481 +2,425 @@ package database
 
 import (
 	"database/sql"
-	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/HanmaDevin/workoutdev/types"
-	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func InitDB(filepath string) *sql.DB {
-	db, err := sql.Open("sqlite3", filepath)
+func InitDB(dataSourceName string) *sql.DB {
+	db, err := sql.Open("sqlite3", dataSourceName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if db == nil {
-		log.Fatal("db nil")
-	}
+
+	CreateTables(db)
+
 	return db
 }
 
 func CreateTables(db *sql.DB) {
-	// Create exercises table
-	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS exercises (
+	usersTable := `
+	CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY,
-		name TEXT,
-		duration INTEGER,
-		description TEXT
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
+		first_name TEXT,
+		last_name TEXT,
+		password TEXT
+	);`
 
-	// Create workouts table
-	_, err = db.Exec(`
+	workoutsTable := `
 	CREATE TABLE IF NOT EXISTS workouts (
 		id TEXT PRIMARY KEY,
 		user_id TEXT,
 		name TEXT,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		comments TEXT,
+		created_at DATETIME,
+		updated_at DATETIME,
+		due_date DATETIME,
+		status TEXT,
 		FOREIGN KEY(user_id) REFERENCES users(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
+	);`
 
-	// Create workout_exercises table
-	_, err = db.Exec(`
+	exercisesTable := `
+	CREATE TABLE IF NOT EXISTS exercises (
+		name TEXT PRIMARY KEY,
+		description TEXT
+	);`
+
+	workoutExercisesTable := `
 	CREATE TABLE IF NOT EXISTS workout_exercises (
 		workout_id TEXT,
-		exercise_id TEXT,
-		PRIMARY KEY (workout_id, exercise_id),
+		exercise_name TEXT,
+		PRIMARY KEY (workout_id, exercise_name),
 		FOREIGN KEY(workout_id) REFERENCES workouts(id),
-		FOREIGN KEY(exercise_id) REFERENCES exercises(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
+		FOREIGN KEY(exercise_name) REFERENCES exercises(name)
+	);`
 
-	// Create sets table
-	_, err = db.Exec(`
+	setsTable := `
 	CREATE TABLE IF NOT EXISTS sets (
 		id TEXT PRIMARY KEY,
-		workout_id TEXT,
-		exercise_id TEXT,
+		exercise_name TEXT,
 		reps INTEGER,
 		weight REAL,
-		FOREIGN KEY(workout_id) REFERENCES workouts(id),
-		FOREIGN KEY(exercise_id) REFERENCES exercises(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create categories table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS categories (
-		id TEXT PRIMARY KEY,
-		name TEXT
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create exercise_categories table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS exercise_categories (
-		exercise_id TEXT,
-		category_id TEXT,
-		PRIMARY KEY (exercise_id, category_id),
-		FOREIGN KEY(exercise_id) REFERENCES exercises(id),
-		FOREIGN KEY(category_id) REFERENCES categories(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create muscles table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS muscles (
-		id TEXT PRIMARY KEY,
-		name TEXT
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create exercise_main_muscles table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS exercise_main_muscles (
-		exercise_id TEXT,
-		muscle_id TEXT,
-		PRIMARY KEY (exercise_id, muscle_id),
-		FOREIGN KEY(exercise_id) REFERENCES exercises(id),
-		FOREIGN KEY(muscle_id) REFERENCES muscles(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create exercise_secondary_muscles table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS exercise_secondary_muscles (
-		exercise_id TEXT,
-		muscle_id TEXT,
-		PRIMARY KEY (exercise_id, muscle_id),
-		FOREIGN KEY(exercise_id) REFERENCES exercises(id),
-		FOREIGN KEY(muscle_id) REFERENCES muscles(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create equipment table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS equipment (
-		id TEXT PRIMARY KEY,
-		name TEXT
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create exercise_equipment table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS exercise_equipment (
-		exercise_id TEXT,
-		equipment_id TEXT,
-		PRIMARY KEY (exercise_id, equipment_id),
-		FOREIGN KEY(exercise_id) REFERENCES exercises(id),
-		FOREIGN KEY(equipment_id) REFERENCES equipment(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create workout_comments table
-	_, err = db.Exec(`
-	CREATE TABLE IF NOT EXISTS workout_comments (
-		id TEXT PRIMARY KEY,
 		workout_id TEXT,
-		comment TEXT,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(exercise_name) REFERENCES exercises(name),
 		FOREIGN KEY(workout_id) REFERENCES workouts(id)
-	);
-	`)
-	if err != nil {
-		log.Fatal(err)
+	);`
+
+	exerciseCategoriesTable := `
+	CREATE TABLE IF NOT EXISTS exercise_categories (
+		exercise_name TEXT,
+		category TEXT,
+		PRIMARY KEY (exercise_name, category),
+		FOREIGN KEY(exercise_name) REFERENCES exercises(name)
+	);`
+
+	exerciseEquipmentTable := `
+	CREATE TABLE IF NOT EXISTS exercise_equipment (
+		exercise_name TEXT,
+		equipment TEXT,
+		PRIMARY KEY (exercise_name, equipment),
+		FOREIGN KEY(exercise_name) REFERENCES exercises(name)
+	);`
+
+	exerciseMainMusclesTable := `
+	CREATE TABLE IF NOT EXISTS exercise_main_muscles (
+		exercise_name TEXT,
+		muscle TEXT,
+		PRIMARY KEY (exercise_name, muscle),
+		FOREIGN KEY(exercise_name) REFERENCES exercises(name)
+	);`
+
+	exerciseSecondaryMusclesTable := `
+	CREATE TABLE IF NOT EXISTS exercise_secondary_muscles (
+		exercise_name TEXT,
+		muscle TEXT,
+		PRIMARY KEY (exercise_name, muscle),
+		FOREIGN KEY(exercise_name) REFERENCES exercises(name)
+	);`
+
+	tables := []string{
+		usersTable,
+		workoutsTable,
+		exercisesTable,
+		workoutExercisesTable,
+		setsTable,
+		exerciseCategoriesTable,
+		exerciseEquipmentTable,
+		exerciseMainMusclesTable,
+		exerciseSecondaryMusclesTable,
+	}
+
+	for _, table := range tables {
+		_, err := db.Exec(table)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
 func PopulateDB(db *sql.DB) {
-	exercises := []types.Exercise{
-		{
-			Name: "Push Up",
-			Equiqments: []types.Equiqment{
-				types.Bodyweight,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Chest,
-				types.Triceps,
-			},
-			SecondaryMuscles: []types.Muscle{
-				types.FrontDelts,
-			},
-			Description: "A classic bodyweight exercise that works the chest, shoulders, and triceps.",
-		},
-		{
-			Name: "Pull Up",
-			Equiqments: []types.Equiqment{
-				types.ChinUpBar,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Back,
-				types.Biceps,
-			},
-			Description: "An upper-body strength exercise that targets the back and biceps.",
-		},
-		{
-			Name: "Squat",
-			Equiqments: []types.Equiqment{
-				types.Barbell,
-				types.Bodyweight,
-			},
-			Categories: []types.Category{
-				types.Strength,
-				types.Powerlifting,
-			},
-			MainMuscles: []types.Muscle{
-				types.Quadriceps,
-				types.Glutes,
-			},
-			SecondaryMuscles: []types.Muscle{
-				types.Hamstrings,
-				types.Calves,
-			},
-			Description: "A fundamental lower-body exercise that strengthens the legs and glutes.",
-		},
-		{
-			Name: "Deadlift",
-			Equiqments: []types.Equiqment{
-				types.Barbell,
-			},
-			Categories: []types.Category{
-				types.Strength,
-				types.Powerlifting,
-			},
-			MainMuscles: []types.Muscle{
-				types.Back,
-				types.Glutes,
-				types.Hamstrings,
-			},
-			Description: "A compound exercise that works the entire posterior chain.",
-		},
-		{
-			Name: "Overhead Press",
-			Equiqments: []types.Equiqment{
-				types.Barbell,
-				types.Dumbbell,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Delts,
-			},
-			SecondaryMuscles: []types.Muscle{
-				types.Triceps,
-			},
-			Description: "A shoulder exercise that builds strength and size in the deltoids.",
-		},
-		{
-			Name: "Bench Press",
-			Equiqments: []types.Equiqment{
-				types.Barbell,
-				types.Bench,
-			},
-			Categories: []types.Category{
-				types.Strength,
-				types.Powerlifting,
-			},
-			MainMuscles: []types.Muscle{
-				types.Chest,
-			},
-			SecondaryMuscles: []types.Muscle{
-				types.FrontDelts,
-				types.Triceps,
-			},
-			Description: "A classic upper-body exercise for building chest strength.",
-		},
-		{
-			Name: "Bent Over Row",
-			Equiqments: []types.Equiqment{
-				types.Barbell,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Back,
-			},
-			SecondaryMuscles: []types.Muscle{
-				types.Biceps,
-				types.RearDelts,
-			},
-			Description: "A compound exercise that targets the muscles of the back.",
-		},
-		{
-			Name: "Lunge",
-			Equiqments: []types.Equiqment{
-				types.Bodyweight,
-				types.Dumbbell,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Quadriceps,
-				types.Glutes,
-			},
-			Description: "A unilateral leg exercise that improves balance and strength.",
-		},
-		{
-			Name: "Bicep Curl",
-			Equiqments: []types.Equiqment{
-				types.Dumbbell,
-				types.Barbell,
-				types.EZBar,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Biceps,
-			},
-			Description: "An isolation exercise for the biceps.",
-		},
-		{
-			Name: "Tricep Extension",
-			Equiqments: []types.Equiqment{
-				types.Dumbbell,
-				types.Cable,
-			},
-			Categories: []types.Category{
-				types.Strength,
-			},
-			MainMuscles: []types.Muscle{
-				types.Triceps,
-			},
-			Description: "An isolation exercise for the triceps.",
-		},
+	exercises := getExercises()
+
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("INSERT OR IGNORE INTO exercises (name, description) VALUES (?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
 
 	for _, exercise := range exercises {
-		exercise.ID = exercise.Name
-		// Insert exercise
-		_, err := db.Exec("INSERT INTO exercises (id, name, duration, description) VALUES (?, ?, ?, ?)",
-			exercise.ID, exercise.Name, exercise.Duration, exercise.Description)
-		if err != nil {
-			log.Printf("Error inserting exercise %s: %v", exercise.Name, err)
-			continue
+		if _, err := stmt.Exec(exercise.Name, exercise.Description); err != nil {
+			log.Fatal(err)
 		}
+		populateJoinTable(tx, "exercise_categories", "category", exercise.Name, exercise.Categories)
+		populateJoinTable(tx, "exercise_equipment", "equipment", exercise.Name, exercise.Equiqment)
+		populateJoinTable(tx, "exercise_main_muscles", "muscle", exercise.Name, exercise.MainMuscles)
+		populateJoinTable(tx, "exercise_secondary_muscles", "muscle", exercise.Name, exercise.SecondaryMuscles)
+	}
 
-		// Insert categories
-		for _, category := range exercise.Categories {
-			// Check if category exists
-			var id string
-			err := db.QueryRow("SELECT id FROM categories WHERE name = ?", category).Scan(&id)
-			if err == sql.ErrNoRows {
-				id = uuid.New().String()
-				_, err = db.Exec("INSERT INTO categories (id, name) VALUES (?, ?)", id, category)
-				if err != nil {
-					log.Printf("Error inserting category %s: %v", category, err)
-					continue
-				}
-			} else if err != nil {
-				log.Printf("Error checking category %s: %v", category, err)
-				continue
-			}
+	if err := tx.Commit(); err != nil {
+		log.Fatal(err)
+	}
+}
 
-			_, err = db.Exec("INSERT INTO exercise_categories (exercise_id, category_id) VALUES (?, ?)", exercise.ID, id)
-			if err != nil {
-				log.Printf("Error linking category %s to exercise %s: %v", category, exercise.Name, err)
-			}
-		}
+func populateJoinTable(tx *sql.Tx, tableName, columnName, exerciseName string, values interface{}) {
+	if values == nil {
+		return
+	}
 
-		// Insert main muscles
-		for _, muscle := range exercise.MainMuscles {
-			// Check if muscle exists
-			var id string
-			err := db.QueryRow("SELECT id FROM muscles WHERE name = ?", muscle).Scan(&id)
-			if err == sql.ErrNoRows {
-				id = uuid.New().String()
-				_, err = db.Exec("INSERT INTO muscles (id, name) VALUES (?, ?)", id, muscle)
-				if err != nil {
-					log.Printf("Error inserting muscle %s: %v", muscle, err)
-					continue
-				}
-			} else if err != nil {
-				log.Printf("Error checking muscle %s: %v", muscle, err)
-				continue
-			}
+	query := fmt.Sprintf("INSERT OR IGNORE INTO %s (exercise_name, %s) VALUES (?, ?)", tableName, columnName)
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
 
-			_, err = db.Exec("INSERT INTO exercise_main_muscles (exercise_id, muscle_id) VALUES (?, ?)", exercise.ID, id)
-			if err != nil {
-				log.Printf("Error linking main muscle %s to exercise %s: %v", muscle, exercise.Name, err)
+	switch v := values.(type) {
+	case []types.Category:
+		for _, item := range v {
+			if _, err := stmt.Exec(exerciseName, item); err != nil {
+				log.Fatal(err)
 			}
 		}
-
-		// Insert secondary muscles
-		for _, muscle := range exercise.SecondaryMuscles {
-			// Check if muscle exists
-			var id string
-			err := db.QueryRow("SELECT id FROM muscles WHERE name = ?", muscle).Scan(&id)
-			if err == sql.ErrNoRows {
-				id = uuid.New().String()
-				_, err = db.Exec("INSERT INTO muscles (id, name) VALUES (?, ?)", id, muscle)
-				if err != nil {
-					log.Printf("Error inserting muscle %s: %v", muscle, err)
-					continue
-				}
-			} else if err != nil {
-				log.Printf("Error checking muscle %s: %v", muscle, err)
-				continue
-			}
-
-			_, err = db.Exec("INSERT INTO exercise_secondary_muscles (exercise_id, muscle_id) VALUES (?, ?)", exercise.ID, id)
-			if err != nil {
-				log.Printf("Error linking secondary muscle %s to exercise %s: %v", muscle, exercise.Name, err)
+	case []types.Equiqment:
+		for _, item := range v {
+			if _, err := stmt.Exec(exerciseName, item); err != nil {
+				log.Fatal(err)
 			}
 		}
-
-		// Insert equipment
-		for _, equipment := range exercise.Equiqments {
-			// Check if equipment exists
-			var id string
-			err := db.QueryRow("SELECT id FROM equipment WHERE name = ?", equipment).Scan(&id)
-			if err == sql.ErrNoRows {
-				id = uuid.New().String()
-				_, err = db.Exec("INSERT INTO equipment (id, name) VALUES (?, ?)", id, equipment)
-				if err != nil {
-					log.Printf("Error inserting equipment %s: %v", equipment, err)
-					continue
-				}
-			} else if err != nil {
-				log.Printf("Error checking equipment %s: %v", equipment, err)
-				continue
-			}
-
-			_, err = db.Exec("INSERT INTO exercise_equipment (exercise_id, equipment_id) VALUES (?, ?)", exercise.ID, id)
-			if err != nil {
-				log.Printf("Error linking equipment %s to exercise %s: %v", equipment, exercise.Name, err)
+	case []types.Muscle:
+		for _, item := range v {
+			if _, err := stmt.Exec(exerciseName, item); err != nil {
+				log.Fatal(err)
 			}
 		}
 	}
 }
 
-func GetExercises(db *sql.DB) string {
-	rows, err := db.Query("SELECT id, name, duration, description FROM exercises")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
+func GetExercises(db *sql.DB) []types.Exercise {
+	return getExercises()
+}
 
-	var exercises []types.Exercise
-	for rows.Next() {
-		var exercise types.Exercise
-		err := rows.Scan(&exercise.ID, &exercise.Name, &exercise.Duration, &exercise.Description)
-		if err != nil {
-			log.Fatal(err)
-		}
-		exercises = append(exercises, exercise)
+func getExercises() []types.Exercise {
+	return []types.Exercise{
+		{
+			Name:             "Barbell Bench Press",
+			Equiqment:        []types.Equiqment{types.Barbell, types.Bench},
+			Categories:       []types.Category{types.Strength},
+			MainMuscles:      []types.Muscle{types.Chest},
+			SecondaryMuscles: []types.Muscle{types.Shoulders, types.Triceps},
+			Description:      "A classic upper body exercise that targets the chest, shoulders, and triceps.",
+		},
+		{
+			Name:             "Squat",
+			Equiqment:        []types.Equiqment{types.Barbell},
+			Categories:       []types.Category{types.Strength, types.Powerlifting},
+			MainMuscles:      []types.Muscle{types.Quadriceps, types.Glutes},
+			SecondaryMuscles: []types.Muscle{types.Hamstrings, types.Calves, types.LowerBack},
+			Description:      "A fundamental lower body exercise that builds strength and muscle in the legs and glutes.",
+		},
+		{
+			Name:             "Deadlift",
+			Equiqment:        []types.Equiqment{types.Barbell},
+			Categories:       []types.Category{types.Strength, types.Powerlifting},
+			MainMuscles:      []types.Muscle{types.LowerBack, types.Glutes, types.Hamstrings},
+			SecondaryMuscles: []types.Muscle{types.Quadriceps, types.Traps, types.Forearms},
+			Description:      "A full-body exercise that develops raw strength and power.",
+		},
+		{
+			Name:             "Overhead Press",
+			Equiqment:        []types.Equiqment{types.Barbell},
+			Categories:       []types.Category{types.Strength},
+			MainMuscles:      []types.Muscle{types.Shoulders},
+			SecondaryMuscles: []types.Muscle{types.Triceps, types.Traps},
+			Description:      "An excellent exercise for building shoulder strength and size.",
+		},
+		{
+			Name:             "Bent Over Row",
+			Equiqment:        []types.Equiqment{types.Barbell},
+			Categories:       []types.Category{types.Strength},
+			MainMuscles:      []types.Muscle{types.Back},
+			SecondaryMuscles: []types.Muscle{types.Biceps, types.Lats, types.Shoulders},
+			Description:      "A great compound exercise for building a thick, strong back.",
+		},
+		{
+			Name:             "Pull Up",
+			Equiqment:        []types.Equiqment{types.PullUpBar},
+			Categories:       []types.Category{types.Strength, types.Calisthenics},
+			MainMuscles:      []types.Muscle{types.Lats},
+			SecondaryMuscles: []types.Muscle{types.Biceps, types.Back},
+			Description:      "A challenging bodyweight exercise that builds upper body pulling strength.",
+		},
+		{
+			Name:             "Dumbbell Curl",
+			Equiqment:        []types.Equiqment{types.Dumbbell},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Biceps},
+			SecondaryMuscles: []types.Muscle{types.Forearms},
+			Description:      "An isolation exercise for building the bicep muscles.",
+		},
+		{
+			Name:             "Tricep Pushdown",
+			Equiqment:        []types.Equiqment{types.Cable},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Triceps},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An isolation exercise that targets the triceps using a cable machine.",
+		},
+		{
+			Name:             "Leg Press",
+			Equiqment:        []types.Equiqment{types.LegPress},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Quadriceps, types.Glutes},
+			SecondaryMuscles: []types.Muscle{types.Hamstrings, types.Calves},
+			Description:      "A machine-based exercise for building lower body strength and mass.",
+		},
+		{
+			Name:             "Lateral Raise",
+			Equiqment:        []types.Equiqment{types.Dumbbell},
+			Categories:       []types.Category{types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Shoulders},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An isolation exercise for the side deltoids, helping to create broader shoulders.",
+		},
+		{
+			Name:             "Push Up",
+			Equiqment:        []types.Equiqment{}, // Bodyweight
+			Categories:       []types.Category{types.Calisthenics, types.Strength},
+			MainMuscles:      []types.Muscle{types.Chest},
+			SecondaryMuscles: []types.Muscle{types.Shoulders, types.Triceps, types.Core},
+			Description:      "A classic bodyweight exercise that builds upper body pushing strength.",
+		},
+		{
+			Name:             "Lunge",
+			Equiqment:        []types.Equiqment{types.Dumbbell}, // Can be bodyweight too
+			Categories:       []types.Category{types.Strength},
+			MainMuscles:      []types.Muscle{types.Quadriceps, types.Glutes},
+			SecondaryMuscles: []types.Muscle{types.Hamstrings},
+			Description:      "A unilateral leg exercise that improves balance, stability, and leg strength.",
+		},
+		{
+			Name:             "Plank",
+			Equiqment:        []types.Equiqment{}, // Bodyweight
+			Categories:       []types.Category{types.Calisthenics},
+			MainMuscles:      []types.Muscle{types.Core},
+			SecondaryMuscles: []types.Muscle{types.Shoulders, types.LowerBack},
+			Description:      "An isometric core strength exercise that involves maintaining a position similar to a push-up for the maximum possible time.",
+		},
+		{
+			Name:             "Lat Pulldown",
+			Equiqment:        []types.Equiqment{types.Machine},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Lats},
+			SecondaryMuscles: []types.Muscle{types.Biceps, types.Back},
+			Description:      "A machine exercise that targets the latissimus dorsi muscles of the back.",
+		},
+		{
+			Name:             "Calf Raise",
+			Equiqment:        []types.Equiqment{types.Machine}, // Can be bodyweight or with weights
+			Categories:       []types.Category{types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Calves},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An exercise to strengthen the calf muscles.",
+		},
+		{
+			Name:             "Incline Dumbbell Press",
+			Equiqment:        []types.Equiqment{types.Dumbbell, types.Bench},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Chest},
+			SecondaryMuscles: []types.Muscle{types.Shoulders, types.Triceps},
+			Description:      "A variation of the bench press that targets the upper portion of the chest.",
+		},
+		{
+			Name:             "Seated Cable Row",
+			Equiqment:        []types.Equiqment{types.Cable, types.Machine},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Back},
+			SecondaryMuscles: []types.Muscle{types.Biceps, types.Lats},
+			Description:      "A seated rowing exercise using a cable machine to target the middle back.",
+		},
+		{
+			Name:             "Leg Extension",
+			Equiqment:        []types.Equiqment{types.Machine},
+			Categories:       []types.Category{types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Quadriceps},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An isolation exercise for the quadriceps muscles.",
+		},
+		{
+			Name:             "Hamstring Curl",
+			Equiqment:        []types.Equiqment{types.Machine},
+			Categories:       []types.Category{types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Hamstrings},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An isolation exercise for the hamstring muscles.",
+		},
+		{
+			Name:             "Face Pull",
+			Equiqment:        []types.Equiqment{types.Cable},
+			Categories:       []types.Category{types.Bodybuilding, types.Strength},
+			MainMuscles:      []types.Muscle{types.Shoulders},
+			SecondaryMuscles: []types.Muscle{types.Back, types.Traps},
+			Description:      "A great exercise for shoulder health and targeting the rear deltoids and upper back.",
+		},
+		{
+			Name:             "Barbell Curl",
+			Equiqment:        []types.Equiqment{types.Barbell},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Biceps},
+			SecondaryMuscles: []types.Muscle{types.Forearms},
+			Description:      "A classic strength exercise for building bicep mass and strength.",
+		},
+		{
+			Name:             "Skull Crusher",
+			Equiqment:        []types.Equiqment{types.Barbell, types.Bench},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Triceps},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An effective isolation exercise for the triceps, also known as lying tricep extensions.",
+		},
+		{
+			Name:             "Romanian Deadlift",
+			Equiqment:        []types.Equiqment{types.Barbell},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Hamstrings, types.Glutes},
+			SecondaryMuscles: []types.Muscle{types.LowerBack},
+			Description:      "A deadlift variation that emphasizes the hamstrings and glutes.",
+		},
+		{
+			Name:             "Hip Thrust",
+			Equiqment:        []types.Equiqment{types.Barbell, types.Bench},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Glutes},
+			SecondaryMuscles: []types.Muscle{types.Hamstrings, types.Quadriceps},
+			Description:      "A popular exercise for building strong and powerful glutes.",
+		},
+		{
+			Name:             "Dumbbell Fly",
+			Equiqment:        []types.Equiqment{types.Dumbbell, types.Bench},
+			Categories:       []types.Category{types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Chest},
+			SecondaryMuscles: []types.Muscle{types.Shoulders},
+			Description:      "An isolation exercise that targets the chest muscles, focusing on the stretch and contraction.",
+		},
+		{
+			Name:             "T-Bar Row",
+			Equiqment:        []types.Equiqment{types.Barbell, types.Machine},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Back},
+			SecondaryMuscles: []types.Muscle{types.Biceps, types.Lats},
+			Description:      "A rowing variation that targets the middle back and lats.",
+		},
+		{
+			Name:             "Shrugs",
+			Equiqment:        []types.Equiqment{types.Barbell, types.Dumbbell},
+			Categories:       []types.Category{types.Strength, types.Bodybuilding},
+			MainMuscles:      []types.Muscle{types.Traps},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "An isolation exercise for the trapezius muscles.",
+		},
+		{
+			Name:             "Russian Twist",
+			Equiqment:        []types.Equiqment{}, // Bodyweight, can add weight
+			Categories:       []types.Category{types.Calisthenics},
+			MainMuscles:      []types.Muscle{types.Core},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "A core exercise that targets the obliques and improves rotational strength.",
+		},
+		{
+			Name:             "Crunches",
+			Equiqment:        []types.Equiqment{}, // Bodyweight
+			Categories:       []types.Category{types.Calisthenics},
+			MainMuscles:      []types.Muscle{types.Core},
+			SecondaryMuscles: []types.Muscle{},
+			Description:      "A classic abdominal exercise that targets the rectus abdominis.",
+		},
 	}
-
-	jsonData, err := json.MarshalIndent(exercises, "", "  ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return string(jsonData)
 }

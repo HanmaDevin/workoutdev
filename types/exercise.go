@@ -1,30 +1,23 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 )
 
 type Exercise struct {
-	ID               string        `json:"id"`
-	Name             string        `json:"name"`
-	Sets             []Set         `json:"sets"`
-	Equiqments       []Equiqment   `json:"equiqments,omitempty"`
-	Duration         time.Duration `json:"duration,omitempty"`
-	Categories       []Category    `json:"categories,omitempty"`
-	MainMuscles      []Muscle      `json:"main_muscles,omitempty"`
-	SecondaryMuscles []Muscle      `json:"secondary_muscles,omitempty"`
-	Description      string        `json:"description,omitempty"`
+	Name             string      `json:"name"`
+	Equiqment        []Equiqment `json:"equiqment,omitempty"`
+	Categories       []Category  `json:"categories,omitempty"`
+	MainMuscles      []Muscle    `json:"main_muscles,omitempty"`
+	SecondaryMuscles []Muscle    `json:"secondary_muscles,omitempty"`
+	Description      string      `json:"description,omitempty"`
 }
 
-func (e *Exercise) String() string {
+func (e Exercise) String() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Exercise ID: %s\n", e.ID))
 	sb.WriteString(fmt.Sprintf("Name: %s\n", e.Name))
-	for _, set := range e.Sets {
-		sb.WriteString(fmt.Sprintf("Set: %s\nReps: %d, Weight: %.2f\n", set.ID, set.Reps, set.Weight))
-	}
 	if len(e.MainMuscles) > 0 {
 		muscles := make([]string, len(e.MainMuscles))
 		for i, m := range e.MainMuscles {
@@ -39,12 +32,12 @@ func (e *Exercise) String() string {
 		}
 		sb.WriteString(fmt.Sprintf("Secondary Muscles: %s\n", strings.Join(muscles, ", ")))
 	}
-	if len(e.Equiqments) > 0 {
-		equiqments := make([]string, len(e.Equiqments))
-		for i, eq := range e.Equiqments {
+	if len(e.Equiqment) > 0 {
+		equiqments := make([]string, len(e.Equiqment))
+		for i, eq := range e.Equiqment {
 			equiqments[i] = string(eq)
 		}
-		sb.WriteString(fmt.Sprintf("Equiqments: %s\n", strings.Join(equiqments, ", ")))
+		sb.WriteString(fmt.Sprintf("Equiqment: %s\n", strings.Join(equiqments, ", ")))
 	}
 	if len(e.Categories) > 0 {
 		categories := make([]string, len(e.Categories))
@@ -53,13 +46,16 @@ func (e *Exercise) String() string {
 		}
 		sb.WriteString(fmt.Sprintf("Categories: %s\n", strings.Join(categories, ", ")))
 	}
+	if e.Description != "" {
+		sb.WriteString(fmt.Sprintf("Description: %s\n", e.Description))
+	}
+
 	return sb.String()
 }
 
-type Set struct {
-	ID     string  `json:"id"`
-	Reps   int     `json:"reps"`
-	Weight float64 `json:"weight"`
+func (e Exercise) JSON() string {
+	data, _ := json.Marshal(e)
+	return string(data)
 }
 
 type Category string
@@ -69,6 +65,8 @@ const (
 	Cardio       Category = "Cardio"
 	Plyometrics  Category = "Plyometrics"
 	Powerlifting Category = "Powerlifting"
+	Bodybuilding Category = "Bodybuilding"
+	Calisthenics Category = "Calisthenics"
 )
 
 type Muscle string
@@ -80,6 +78,7 @@ const (
 	Back         Muscle = "Back"
 	UpperBack    Muscle = "Upper Back"
 	LowerBack    Muscle = "Lower Back"
+	Shoulders    Muscle = "Shoulders"
 	Delts        Muscle = "Delts"
 	FrontDelts   Muscle = "Front Delts"
 	LateralDelts Muscle = "Lateral Delts"
@@ -109,6 +108,7 @@ const (
 	Barbell          Equiqment = "Barbell"
 	Bench            Equiqment = "Bench"
 	ChinUpBar        Equiqment = "Chin Up Bar"
+	PullUpBar        Equiqment = "Pull Up Bar"
 	ResistanceBand   Equiqment = "Resistance Band"
 	MedicineBall     Equiqment = "Medicine Ball"
 	StabilityBall    Equiqment = "Stability Ball"
@@ -125,4 +125,5 @@ const (
 	Bodyweight       Equiqment = "Bodyweight"
 	Kettlebell       Equiqment = "Kettlebell"
 	Weighted         Equiqment = "Weighted"
+	Machine          Equiqment = "Machine"
 )
