@@ -35,13 +35,44 @@ func CreateTables(db *sql.DB) {
 		log.Fatal(err)
 	}
 
+	// Create workouts table
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS workouts (
+		id TEXT PRIMARY KEY,
+		user_id TEXT,
+		name TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create workout_exercises table
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS workout_exercises (
+		workout_id TEXT,
+		exercise_id TEXT,
+		PRIMARY KEY (workout_id, exercise_id),
+		FOREIGN KEY(workout_id) REFERENCES workouts(id),
+		FOREIGN KEY(exercise_id) REFERENCES exercises(id)
+	);
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create sets table
 	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS sets (
 		id TEXT PRIMARY KEY,
+		workout_id TEXT,
 		exercise_id TEXT,
 		reps INTEGER,
 		weight REAL,
+		FOREIGN KEY(workout_id) REFERENCES workouts(id),
 		FOREIGN KEY(exercise_id) REFERENCES exercises(id)
 	);
 	`)
@@ -137,12 +168,25 @@ func CreateTables(db *sql.DB) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Create workout_comments table
+	_, err = db.Exec(`
+	CREATE TABLE IF NOT EXISTS workout_comments (
+		id TEXT PRIMARY KEY,
+		workout_id TEXT,
+		comment TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(workout_id) REFERENCES workouts(id)
+	);
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func PopulateDB(db *sql.DB) {
 	exercises := []types.Exercise{
 		{
-			ID:   "ex1",
 			Name: "Push Up",
 			Equiqments: []types.Equiqment{
 				types.Bodyweight,
@@ -160,7 +204,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A classic bodyweight exercise that works the chest, shoulders, and triceps.",
 		},
 		{
-			ID:   "ex2",
 			Name: "Pull Up",
 			Equiqments: []types.Equiqment{
 				types.ChinUpBar,
@@ -175,7 +218,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "An upper-body strength exercise that targets the back and biceps.",
 		},
 		{
-			ID:   "ex3",
 			Name: "Squat",
 			Equiqments: []types.Equiqment{
 				types.Barbell,
@@ -196,7 +238,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A fundamental lower-body exercise that strengthens the legs and glutes.",
 		},
 		{
-			ID:   "ex4",
 			Name: "Deadlift",
 			Equiqments: []types.Equiqment{
 				types.Barbell,
@@ -213,7 +254,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A compound exercise that works the entire posterior chain.",
 		},
 		{
-			ID:   "ex5",
 			Name: "Overhead Press",
 			Equiqments: []types.Equiqment{
 				types.Barbell,
@@ -231,7 +271,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A shoulder exercise that builds strength and size in the deltoids.",
 		},
 		{
-			ID:   "ex6",
 			Name: "Bench Press",
 			Equiqments: []types.Equiqment{
 				types.Barbell,
@@ -251,7 +290,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A classic upper-body exercise for building chest strength.",
 		},
 		{
-			ID:   "ex7",
 			Name: "Bent Over Row",
 			Equiqments: []types.Equiqment{
 				types.Barbell,
@@ -269,7 +307,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A compound exercise that targets the muscles of the back.",
 		},
 		{
-			ID:   "ex8",
 			Name: "Lunge",
 			Equiqments: []types.Equiqment{
 				types.Bodyweight,
@@ -285,7 +322,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "A unilateral leg exercise that improves balance and strength.",
 		},
 		{
-			ID:   "ex9",
 			Name: "Bicep Curl",
 			Equiqments: []types.Equiqment{
 				types.Dumbbell,
@@ -301,7 +337,6 @@ func PopulateDB(db *sql.DB) {
 			Description: "An isolation exercise for the biceps.",
 		},
 		{
-			ID:   "ex10",
 			Name: "Tricep Extension",
 			Equiqments: []types.Equiqment{
 				types.Dumbbell,
@@ -318,21 +353,13 @@ func PopulateDB(db *sql.DB) {
 	}
 
 	for _, exercise := range exercises {
+		exercise.ID = exercise.Name
 		// Insert exercise
 		_, err := db.Exec("INSERT INTO exercises (id, name, duration, description) VALUES (?, ?, ?, ?)",
 			exercise.ID, exercise.Name, exercise.Duration, exercise.Description)
 		if err != nil {
 			log.Printf("Error inserting exercise %s: %v", exercise.Name, err)
 			continue
-		}
-
-		// Insert sets
-		for _, set := range exercise.Sets {
-			_, err := db.Exec("INSERT INTO sets (id, exercise_id, reps, weight) VALUES (?, ?, ?, ?)",
-				set.ID, exercise.ID, set.Reps, set.Weight)
-			if err != nil {
-				log.Printf("Error inserting set for exercise %s: %v", exercise.Name, err)
-			}
 		}
 
 		// Insert categories

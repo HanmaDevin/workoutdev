@@ -8,6 +8,7 @@ import (
 
 type Workout struct {
 	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
 	Name      string     `json:"name"`
 	Exercises []Exercise `json:"exercises"`
 	Comments  []string   `json:"comments,omitempty"`
@@ -17,12 +18,12 @@ type Workout struct {
 	Status    string     `json:"status,omitempty"`
 }
 
-func (w *Workout) Format() string {
+func (w *Workout) String() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Workout ID: %s\n", w.ID))
 	sb.WriteString(fmt.Sprintf("Name: %s\n", w.Name))
 	for _, exercise := range w.Exercises {
-		sb.WriteString(exercise.Format())
+		sb.WriteString(exercise.String())
 	}
 	return sb.String()
 }

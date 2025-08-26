@@ -18,7 +18,7 @@ type Exercise struct {
 	Description      string        `json:"description,omitempty"`
 }
 
-func (e *Exercise) Format() string {
+func (e *Exercise) String() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Exercise ID: %s\n", e.ID))
 	sb.WriteString(fmt.Sprintf("Name: %s\n", e.Name))
